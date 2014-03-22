@@ -1,0 +1,313 @@
+<html>
+
+<head>
+    <meta name="Title" content="documentation">
+    <meta name="Author" content="Satya Prakash Tripathi">
+    <meta name="Subject" content="XmlPlus Documentation">
+    <meta name="Description" content="XmlPlus Documentation">
+    <meta name="Keywords" content="XmlPlus examples, xml schema examples">
+    <meta name="Language" content="English">
+    <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+  <title>XmlPlus Examples</title>
+  <STYLE TYPE="text/css">
+  <!-- BODY
+   {
+   font-family:sans-serif;
+   }
+    -->
+  </STYLE>  
+<script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-18904337-3']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>  
+</head>
+
+<h2>XmlPlus Examples<hr NOSHADE SIZE=10 WIDTH=100%> </h2>
+
+<body>
+  <form>
+    
+    <ul>
+      <li><a href="#HOWTO_EXAMPLES">How to try examples</a>
+      <li><a href="#RUNTESTS">Build and test all of examples/ and Tests/ directories</a>
+      <li><a href="#EX_BY_TAGS">Examples by tags</a>
+      <li><a href="#EX_WITH_GENSRC">Browse Examples with Generated Source</a>
+      <li><a href="#BROWSE_EXTESTS">Browse Examples and Tests</a>
+    </ul>
+
+    <a name="HOWTO_EXAMPLES"><h3>How to try examples <hr NOSHADE SIZE=7 WIDTH=100%> </h3></a>
+
+<p>
+The examples in the source package, come clean of generated code or makefile. Upon xsd2cpp invocation on the input schema file, the source and makefiles are generated. Please read the topic <a href="usage.html">Tool Usage</a>, to learn about xsd2cpp-usage, building generated source, and running the executables.
+</p>    
+
+    Each example directory, comes with following files:
+    <ol>
+      <li> one or more XML-Schema file(s)
+      <li> a valid.xml file(a valid XML file for reference)
+      <li> a main.cpp file 
+    </ol>
+    
+    As mentioned earlier, xsd2cpp usage is:<br>
+    <hr NOSHADE SIZE=1 WIDTH=50% align=left>
+    <code>
+      $ xsd2cpp <br> 
+      Usage:<br>
+      1.  xsd2cpp xsd-file [outdir]<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;outdir: directory to output the generated source, like foo, . , .. etc.<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;(if unspecified, defaults to xsd-file-name)<br>
+      <br>
+      2.  xsd2cpp -v<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;prints version<br>
+      <br>
+      3.  xsd2cpp -h<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;prints help<br>
+    </code>
+    <hr NOSHADE SIZE=1 WIDTH=50% align=left>
+    <br><br>
+
+    <b>To try examples, all you have to do is to, run xsd2cpp in the respective examples directory with output directory 
+    specified as "." and then build.</b><br>
+    Each example directory is already provided with the main.cpp having populateDocument() function already filled.
+    <br><br>
+
+    You can of course, experiment with the code in the main.cpp, especiallly with the template functions:<br> 
+    <code>  
+    void populateDocument(DOM::Document* pDoc)<br>
+    void updateOrConsumeDocument(DOM::Document* pDoc)<br>
+    </code>
+
+    Note that, for writing sample XML document, roundtripping XML document, or validating XML document you don't have to fill the above mentioned functions in main.cpp file. 
+
+    <br><br>
+    It is recommended that you use outdir as ".", for examples because:
+    <ul>  
+      <li> example directories are already organized with sensible names
+      <li> using outdir as "." helps in easily consuming supplied main.cpp in build
+    </ul>  
+
+    If for whatever reason you have specified a outdir other than ".", then you would need to:
+    <ul>
+      <li> copy the supplied main.cpp in the outdir
+      <li> cd outdir , before building the source
+    </ul>  
+
+    Here is an example xsd2cpp run of simpleTypesDemo example:<br>
+    <hr NOSHADE SIZE=1 WIDTH=50% align=left>
+      <code>
+      $ cd simpleTypesDemo/<br>
+      $ xsd2cpp simpleTypesDemo.xsd .<br>
+      output path: .<br>
+      =&gt;  Generating source files...<br>
+      =&gt;  Generating automake/autoconf files ...<br>
+    <hr NOSHADE SIZE=1 WIDTH=50% align=left>
+
+    <br><br>
+    For building the source in the outdir:
+    <hr NOSHADE SIZE=1 WIDTH=50% align=left>
+    $ ./autogen.sh<br>
+    $ make   <br>
+    $ make install   <br>
+    $ make doxygen-doc<br>
+      </code>
+    <hr NOSHADE SIZE=1 WIDTH=50% align=left>
+
+    <br><br>
+    After successful build and install, you should have a run binary installed. Use this run binary to try out the available options.  <br>
+    An example of &lt;name&gt;run options: 
+    <hr NOSHADE SIZE=1 WIDTH=50% align=left>
+      <code>
+    $ ./build/bin/simpleTypesDemorun --help <br>
+    Usage: ./build/bin/simpleTypesDemorun [options] [XMLfile] <br>
+    Options:<br>
+    &nbsp;-s, --sample<br>
+    &nbsp;&nbsp; create a schema-driven sample xml-file<br>
+    &nbsp;-w, --write<br>
+    &nbsp;&nbsp; write a xml-file using populated Document<br>
+    &nbsp;&nbsp; Note: populateDocument() function in main.cpp template,<br>
+    &nbsp;&nbsp; must be used to populate the Document<br>
+    &nbsp;-v, --validate<br>
+    &nbsp;&nbsp; validate input xml-file(against compiled schema)<br>
+    &nbsp;-r, --roundtrip<br>
+    &nbsp;&nbsp; roundtrip (read-&gt;write) input xml-file<br>
+    &nbsp;-u, --row<br>
+    &nbsp;&nbsp; perform read-&gt;operate-&gt;write operations on input xml-file<br>
+    &nbsp;-h, --help<br>
+    &nbsp;&nbsp; print help<br>
+      </code>         
+    <hr NOSHADE SIZE=1 WIDTH=50% align=left>
+
+    <br><br>
+    <a name="RUNTESTS"><h3>Build and test all of examples/ and Tests/ directories<hr NOSHADE SIZE=7 WIDTH=100%> </h3></a>
+
+  There is a script named <code>runTests.sh</code> in source home. The options for this script are:<br> 
+  <hr NOSHADE SIZE=1 WIDTH=50% align=left>
+  <pre>
+$ ./runTests.sh -h
+
+Usage:
+$ runTests.sh  [-c | -t]
+  -c  cleanup all the test directories
+  -t  cleanup and test all the test directories
+  -h  print help
+
+  (test directories include: Tests/ examples/) 
+  </pre>
+  <hr NOSHADE SIZE=1 WIDTH=50% align=left>
+  The options are self-explanatory. When run with -t option, this script iteratively builds and tests all examples and Tests directories(though it takes long to finish).<br>
+  If you want save the effort of building all examples(and Tests directories) one by one, before you could experiment with the respective builds, running <b>"runTests.sh -t"</b> may be a good idea.<br>
+  Please be informed that with both "-c" and "-t" options, this script cleans up the <code>Tests</code> and <code>examples</code> directories <b>recursively</b>, of files that it thinks are temporary files(it does warn you about about the same and requests your permission before proceeding). If you have important changes in those directories, those changes should be backed up before proceeding with this script.
+
+    <br><br>
+    <a name="EX_BY_TAGS"><h3>Examples by tags <hr NOSHADE SIZE=7 WIDTH=100%> </h3></a>
+    
+    <table border=1>
+      <caption>Find examples by tags</caption>
+
+      <tr>
+        <th width=20%>Example</th>
+        <th width=80%>Associated Tags</th>
+      </tr>
+      <tr>
+        <td><a href="browse_examples.html#examples_helloWorld">helloWorld</a></td>
+        <td>
+        <b>Schema components:</b> element
+        <br><b>BuiltIn Types:</b> string
+        </td>
+      </tr>
+      <tr>
+        <td><a href="browse_examples.html#examples_helloWorldWide">helloWorldWide</a></td>
+        <td>
+        <b>Schema components:</b> element
+        <br><b>BuiltIn Types:</b> string
+        <br><b>Facets:</b> maxLength
+        <br><b>Other Tags:</b> wide characters
+        </td>
+      </tr>
+      <tr>
+        <td><a href="browse_examples.html#examples_simplest">simplest</a></td>
+        <td>
+        <b>Schema components:</b>
+          complexType, element, attribute
+        <br><b>BuiltIn Types:</b> string
+        <br><b>Schema controlled Attributes:</b>
+          elementFormDefault
+        <br><b>Other Tags:</b>
+          targetNamespace, mixed content
+        </td>
+      <tr>
+      <tr>
+        <td><a href="browse_examples.html#examples_simpleTypesDemo">simpleTypesDemo</a></td>
+        <td>
+        <b>Schema components:</b>
+          complexType, simpleType, element, attribute
+        
+        <br><b>Schema controlled Attributes:</b>
+          elementFormDefault, attributeFormDefault, minOccurs, maxOccurs, fixed
+
+        <br><b>simpleType variety:</b> atomic, union, list
+
+        <br><b>BuiltIn Types:</b>
+        boolean, decimal, float, double, integer, positiveInteger, 
+        nonPositiveInteger, negativeInteger, nonNegativeInteger, long, 
+        int, short, byte, unsignedLong, unsignedInt, unsignedShort, 
+        unsignedByte, hexBinary, base64Binary, anyURI, normalizedString, 
+        token, language, Name, NCName, QName, dateTime, date, 
+        gYearMonth, gYear, gMonthDay, gMonth, gDay, time, duration, 
+        ID, IDREF, IDREFS, ENTITY, ENTITIES, NMTOKEN, NMTOKENS
+        
+        <br><b>Facets:</b>
+          minLength, minInclusive, maxInclusive, minExclusive, maxExclusive, pattern etc.
+        
+        <br><b>Other Tags:</b>
+          targetNamespace, mixed content, attribute/element sharing common name
+        </td>
+
+      </tr>
+      <tr>
+        <td><a href="browse_examples.html#examples_po">purchaseOrder</a></td>
+        <td>
+        <b>Schema components:</b>
+          complexType, simpleType, element, attribute, anonymous element
+        
+        <br><b>Schema controlled Attributes:</b>
+          minOccurs, maxOccurs, fixed
+
+        <br><b>Facets:</b>
+          pattern
+        </td>
+      </tr>
+      <tr>
+        <td><a href="browse_examples.html#examples_mails">mails</a></td>
+        <td>
+        <b>Schema components:</b>
+          complexType, simpleType, element, attribute
+        
+        <br><b>Schema controlled Attributes:</b>
+          minOccurs, maxOccurs
+
+        <br><b>Facets:</b>
+          enumeration
+        
+        <br><b>Other Tags:</b>
+          Model Group 'sequence' with maxOccurs="unbounded"
+        </td>
+      </tr>
+      <tr>
+        <td><a href="browse_examples.html#examples_includeDemo">includeDemo</a></td>
+        <td>
+        <b>Schema components:</b>
+          complexType, simpleType, element, attribute, include
+
+        <br><b>Schema controlled Attributes:</b>
+          minOccurs, maxOccurs
+        </td>
+      </tr>
+      <tr>
+        <td><a href="browse_examples.html#examples_org">organization</a></td>
+        <td>
+         <b>Schema components:</b>
+          complexType, simpleType, element, attribute, import
+        
+          <br><b>Schema controlled Attributes:</b>
+          minOccurs, maxOccurs
+          
+          <br><b>Other Tags:</b>
+          targetNamespace, nested imports
+        </td>
+      </tr>
+      
+      <tr>
+        <td> many more examples...</td>
+        <td>Please check out yourself under <code>examples</code> directory. You could also browse examples and Tests using links below.</td>
+      </tr>
+    </table>
+
+  <a name="EX_WITH_GENSRC"><h3>Browse Examples With Generated Source<hr NOSHADE SIZE=7 WIDTH=100%> </h3></a>
+<p>
+The examples in the source package, come clean i.e. they don't have the generated source with themselves already. Upon xsd2cpp invocation on the input schema file, the source and makefiles are generated. It is not practical to list out generated source for all examples, as it gets very verbose and long. <p>
+ Please follow this link, to view a few examples with generated source: 
+   <a href="examples_complete.html">Samples of Generated Source</a>
+  
+  <a name="BROWSE_EXTESTS"><h3>Browse Examples and Tests <hr NOSHADE SIZE=7 WIDTH=100%> </h3></a>
+The complete list of examples and tests(excluding generated source) for browsing. 
+  <ul>
+    <li> <a href="browse_examples.html">Browse Examples</a>
+    <li> <a href="browse_tests.html">Browse Tests</a>
+  </ul>
+
+  <br><br>
+  </form>
+</body>
+
+
+</html>

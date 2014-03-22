@@ -1,0 +1,328 @@
+#!/bin/bash
+
+#
+# This file is part of XmlPlus package
+# 
+# Copyright (C)   2010-2011   Satya Prakash Tripathi
+#
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+INST_BIN_DIR=@bindir@
+INST_LIB_DIR=@libdir@
+INST_INCL_DIR=@includedir@
+DATA_DIR=@datadir@
+RESOURCES_DIR=@datadir@/tools/resources
+XSD2CPP_XSL_PATH=$DATA_DIR/tools/xsl/xsd2cpp.xsl
+
+MKDIR=`which mkdir`
+XSLTPROC=`which xsltproc`
+BASENAME=`which basename`
+SED=`which sed`
+CUT=`which cut`
+FIND=`which find`
+GREP=`which grep`
+AWK=`which awk`
+CP=`which cp`
+MV=`which mv`
+RM=`which rm`
+CAT=`which cat`
+GETOPT=`which getopt`
+DIRNAME=`which dirname`
+CHMOD=`which chmod`
+
+OUTDIR=""
+XSD=""
+XSDNAME=""
+VALID_XSDTOKEN=""
+PATH=""
+CWD=""
+ABSPATH=""
+GEN_XSD_SOURCES=""
+GEN_XSD_INCLUDES=""
+NSALIASES_FILE="none"
+TERMINATE_ON_ERROR=yes
+XPLUS_META_DIR=""
+XPLUS_SCHEMAINFO_DIR=""
+DEBUG=0
+PROFILE=0
+
+get_abs_path()
+{
+  if [ "${PATH:0:1}" == "/" ]; then
+    ABSPATH=$PATH
+  else
+    ABSPATH=`pwd`/$PATH
+  fi
+}
+
+init()
+{
+  XSDNAME=`$BASENAME $XSD | $CUT -d'.' -f1`
+  # token should be valid for Makefile targets and for directory name
+  # eg. '-' is valid for dir-name but not valid as Makefile target
+  VALID_XSDTOKEN=`echo $XSDNAME | $SED -e's/-/_/g'`
+  
+  if [ -z "$OUTDIR" ]; then
+    OUTDIR=$VALID_XSDTOKEN
+  fi
+
+  CWD=`pwd`
+  
+  echo
+  echo "output path: $OUTDIR"
+  
+  PATH=$XSD
+  get_abs_path
+  ABSXSD=$ABSPATH
+
+  PATH=$XSD2CPP_XSL_PATH
+  get_abs_path
+  XSD2CPP_XSL_PATH=$ABSPATH
+
+  XPLUS_META_DIR=$CWD/.xplusmeta
+  XPLUS_SCHEMAINFO_DIR=$CWD/.xplus.schemaInfo
+}
+
+cleanup_meta()
+{
+  $RM -rf $XPLUS_META_DIR
+}
+
+gen_source_files()
+{
+  echo
+  echo "=>  Generating source files..."
+
+  BACKUP_DIR=""
+  PID=$$
+  if [ "$OUTDIR" = "." ] || [  "$OUTDIR" = ".." ]; then
+    
+    BACKUP_DIR=$OUTDIR/xplus.bak/$PID
+    DIRS_TO_BACKUP=""
+    if [ -e "$OUTDIR/src" ]; then
+      $MKDIR -p $BACKUP_DIR
+      DIRS_TO_BACKUP="$DIRS_TO_BACKUP $OUTDIR/src"
+    fi
+    if [ -e "$OUTDIR/include" ]; then
+      $MKDIR -p $BACKUP_DIR
+      DIRS_TO_BACKUP="$DIRS_TO_BACKUP $OUTDIR/include"
+    fi
+    if [ "$DIRS_TO_BACKUP" != "" ]; then
+      echo "    * The directories ($DIRS_TO_BACKUP) already exist."
+      echo "      Backing them up in $BACKUP_DIR"
+      #$RM -rf $BACKUP_DIR/*
+      $MV $DIRS_TO_BACKUP $BACKUP_DIR/
+    fi
+
+  else
+    BACKUP_DIR=xplus.bak/$PID
+    if [ -e "$OUTDIR" ]; then
+      echo "    * the directory $OUTDIR already exists, backing up in $BACKUP_DIR"
+      $MKDIR -p $BACKUP_DIR
+      $MV "$OUTDIR" $BACKUP_DIR/
+    fi
+    $MKDIR $OUTDIR
+  fi
+    
+  
+
+  # generate the xsd-to-sources
+  cd $OUTDIR
+  XSDDIR=`$DIRNAME $ABSXSD`
+  if [ -f $XSDDIR/nsaliases.xml ]; then
+    NSALIASES_FILE=$XSDDIR/nsaliases.xml
+  fi
+
+  $MKDIR -p $XPLUS_META_DIR
+  $MKDIR -p $XPLUS_SCHEMAINFO_DIR
+  XSLTPROC_OPTIONS="--stringparam input_doc $ABSXSD --stringparam CWD $CWD --stringparam w3cXmlSchema false --stringparam NSALIASES_FILE $NSALIASES_FILE --stringparam TERMINATE_ON_ERROR $TERMINATE_ON_ERROR"
+  if [ $DEBUG -eq 1 ]; then
+    XSLTPROC_OPTIONS="-v $XSLTPROC_OPTIONS"
+  fi
+  if [ $PROFILE -eq 1 ]; then
+    XSLTPROC_OPTIONS="--profile $XSLTPROC_OPTIONS"
+  fi
+  
+  #$XSLTPROC $XSLTPROC_OPTIONS $XSD2CPP_XSL_PATH $ABSXSD 2>&1 | $GREP -v "xplus.schemaInfo"
+  $XSLTPROC $XSLTPROC_OPTIONS $XSD2CPP_XSL_PATH $ABSXSD > $XPLUS_META_DIR/log 2>&1
+  ret=$?
+  $CAT $XPLUS_META_DIR/log | $GREP -v xplus.schemaInfo
+  if [ $ret -ne 0 ]; then
+    echo
+    echo "  *** failed to generate source... $ret"
+    cleanup_meta
+    exit $ret
+  fi
+
+  #beautify
+  for file in `$FIND include/ -name "*.h"`
+  do
+    tmpFile=/tmp/`$BASENAME $file`.tmp
+    $SED -e 's/MEMBER_VAR //g' -e 's/MEMBER_FN //g' \
+         -e 's/XMARKER //g' \
+         $file > $tmpFile
+    $MV $tmpFile $file
+  done
+  for file in `$FIND src/ -name "*.cpp"`
+  do
+    tmpFile=/tmp/`$BASENAME $file`.tmp
+    $SED -e 's/MEMBER_VAR //g' -e 's/MEMBER_FN //g' \
+         -e 's/XMARKER //g' \
+         $file > $tmpFile
+    tmpFile=/tmp/`$BASENAME $file`.tmp
+    $MV $tmpFile $file
+  done
+    
+
+  # create main.cpp if it doesnt exist already
+  if [ ! -e  main.cpp ]; then
+    $MV main.cpp.template main.cpp
+  else
+    echo "    * Found a main.cpp file, so writing instead a main.cpp.template file."
+    echo "      Certain schema edits may require the new main.cpp.template to be"
+    echo "      used instead of the existing main.cpp. In such cases, please rename"
+    echo "      main.cpp.template to main.cpp after applying any of your edits from "
+    echo "      main.cpp to main.cpp.template"
+  fi
+  
+  #GEN_XSD_SOURCES=`cd src && $FIND . -name "*.cpp" | $GREP -v "main\.cpp"`
+  GEN_XSD_SOURCES=`cd src && $FIND . -name "*.cpp" | $AWK '/$/{printf "%s ", $0;next}{print}'`
+  GEN_XSD_INCLUDES=`cd include && $FIND . -name "*.h" | $AWK '/$/{printf "%s ", $0;next}{print}'`
+  cd - > /dev/null 2>&1
+    
+  echo 
+}
+
+gen_automake_files()
+{
+  echo "=>  Generating automake/autoconf files ..."
+
+  CONFIG_AC_FILE=$RESOURCES_DIR/configure.ac
+  MAKE_AM_TOP_SRC_DIR_FILE=$RESOURCES_DIR/Makefile.am.top_srcdir
+  MAKE_AM_SRC_DIR_FILE=$RESOURCES_DIR/Makefile.am.src
+  MAKE_AM_INC_DIR_FILE=$RESOURCES_DIR/Makefile.am.include
+
+  $SED -e "s/@xsdname@/$VALID_XSDTOKEN/g" $CONFIG_AC_FILE > $OUTDIR/configure.ac
+  $SED -e "s/@xsdname@/$VALID_XSDTOKEN/g" $MAKE_AM_TOP_SRC_DIR_FILE > $OUTDIR/Makefile.am
+  $SED -e "s/@xsdname@/$VALID_XSDTOKEN/g" $MAKE_AM_SRC_DIR_FILE > $OUTDIR/src/Makefile.am
+  $CP $MAKE_AM_INC_DIR_FILE  $OUTDIR/include/Makefile.am
+  $CP $RESOURCES_DIR/acinclude.m4 $OUTDIR/
+  $CP $RESOURCES_DIR/aminclude.am $OUTDIR/
+  $CP $RESOURCES_DIR/doxygen.cfg $OUTDIR/
+  #$SED -e "s/@genxsdsources@/$GEN_XSD_SOURCES/g" $MAKE_AM_SRC_DIR_FILE > $OUTDIR/src/Makefile.am
+  echo "$GEN_XSD_SOURCES" >> $OUTDIR/src/Makefile.am
+  echo "$GEN_XSD_INCLUDES" >> $OUTDIR/include/Makefile.am
+  $CP $RESOURCES_DIR/autogen.sh $OUTDIR/autogen.sh && $CHMOD +x $OUTDIR/autogen.sh
+  
+  echo
+}
+
+gen_readme()
+{
+  echo "=>  Generating README.build.txt file ..."
+  $CP $RESOURCES_DIR/README.build.txt $OUTDIR/
+  echo
+}
+
+run()
+{
+  # FIXME remove schemaInfo after run too if not set debug 
+  $RM -rf $XPLUS_SCHEMAINFO_DIR
+  cleanup_meta
+  gen_source_files
+  gen_automake_files
+  gen_readme
+  #echo " The generated source needs to be built now. Please read README.build.txt to learn about steps to build" 
+  cleanup_meta
+}
+
+
+print_usage()
+{
+  echo "Usage:"
+  echo
+  echo "1.  xsd2cpp [-s] xsd-file [outdir]"
+  echo "      outdir: directory to output the generated source, like foo, . , .. etc."
+  echo "      (if unspecified, defaults to xsd-file-name)"
+  echo
+  echo "    -s :  do not terminate on error"
+  echo
+  echo "2.  xsd2cpp -v"
+  echo "      prints verion"
+  echo
+  echo "3.  xsd2cpp -h"
+  echo "      prints help"
+  echo
+}
+
+print_version()
+{
+  $CAT $DATA_DIR/tools/resources/version
+}
+
+
+#main
+
+args=`$GETOPT hdpvs $*`
+if [ $? != 0 ]; then
+  print_usage
+  exit 2
+fi
+set -- $args
+for i
+do
+  case "$i" in
+    -h)
+      print_usage
+      exit
+      shift;;
+    -v)
+      print_version
+      exit
+      shift;;
+    -d)
+      DEBUG=1
+      shift;;
+    -p)
+      PROFILE=1
+      shift;;
+    -s)
+      TERMINATE_ON_ERROR=no
+      shift;;
+    --)
+      shift; break;;
+  esac
+done
+
+if [ $# -ge 1 ]; then
+  XSD=$1
+  if [ ! -f $XSD ]; then
+    echo "xsd2cpp: $XSD: No such file or directory"
+    echo "xsd2cpp: no input file"
+    exit 1
+  fi
+  if [ $# -eq 2 ]; then
+    OUTDIR=$2
+  fi
+else
+  print_usage
+  exit 2
+fi
+
+
+init
+run
+
